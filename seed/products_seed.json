@@ -1,0 +1,122 @@
+[
+  {
+    "sku": "b1",
+    "name": "Woodland Leather Belt - Brown",
+    "price": 1299,
+    "original_price": 1799,
+    "rating": 4.4,
+    "image_url": "https://via.placeholder.com/600x600?text=Woodland+Leather+Belt",
+    "category": "belts",
+    "brand": "Woodland",
+    "in_stock": true,
+    "is_new": true
+  },
+  {
+    "sku": "b2",
+    "name": "Tommy Hilfiger Classic Belt",
+    "price": 1599,
+    "original_price": 2099,
+    "rating": 4.5,
+    "image_url": "https://via.placeholder.com/600x600?text=Tommy+Hilfiger+Classic+Belt",
+    "category": "belts",
+    "brand": "Tommy Hilfiger",
+    "in_stock": true,
+    "is_new": false
+  },
+  {
+    "sku": "c1",
+    "name": "Premium Cotton Kurta - Royal Blue",
+    "price": 1299,
+    "original_price": 1799,
+    "rating": 4.5,
+    "image_url": "https://via.placeholder.com/600x600?text=Premium+Cotton+Kurta",
+    "category": "clothes",
+    "brand": "LocalBrand",
+    "in_stock": true,
+    "is_new": true
+  },
+  {
+    "sku": "c2",
+    "name": "Men's Casual Shirt - Sky",
+    "price": 899,
+    "original_price": 1199,
+    "rating": 4.2,
+    "image_url": "https://via.placeholder.com/600x600?text=Men+Casual+Shirt",
+    "category": "clothes",
+    "brand": "DenimCo",
+    "in_stock": true,
+    "is_new": false
+  },
+  {
+    "sku": "w1",
+    "name": "Titan Analog Watch - Classic",
+    "price": 12999,
+    "original_price": 15999,
+    "rating": 4.6,
+    "image_url": "https://via.placeholder.com/600x600?text=Titan+Analog+Watch",
+    "category": "watches",
+    "brand": "Titan",
+    "in_stock": true,
+    "is_new": true
+  },
+  {
+    "sku": "w2",
+    "name": "Fossil Gen 6 Smartwatch",
+    "price": 18999,
+    "original_price": null,
+    "rating": 4.5,
+    "image_url": "https://via.placeholder.com/600x600?text=Fossil+Gen+6",
+    "category": "watches",
+    "brand": "Fossil",
+    "in_stock": true,
+    "is_new": false
+  },
+  {
+    "sku": "cl_s1",
+    "name": "Traditional Saree - Silk",
+    "price": 2999,
+    "original_price": 3999,
+    "rating": 4.8,
+    "image_url": "https://via.placeholder.com/600x600?text=Traditional+Saree",
+    "category": "clothes",
+    "brand": "EthnicCo",
+    "in_stock": true,
+    "is_new": true
+  },
+  {
+    "sku": "c6",
+    "name": "Casual Jeans - Slim Fit",
+    "price": 1799,
+    "original_price": 2299,
+    "rating": 4.4,
+    "image_url": "https://via.placeholder.com/600x600?text=Casual+Jeans",
+    "category": "clothes",
+    "brand": "DenimCo",
+    "in_stock": false,
+    "is_new": false
+  },
+  {
+    "sku": "p1",
+    "name": "Aromatic Perfume - 100ml",
+    "price": 1499,
+    "original_price": 1999,
+    "rating": 4.3,
+    "image_url": "https://via.placeholder.com/600x600?text=Aromatic+Perfume",
+    "category": "perfumes",
+    "brand": "Aroma",
+    "in_stock": true,
+    "is_new": false
+  },
+  {
+    "sku": "s1",
+    "name": "Running Shoes - SportPro",
+    "price": 3499,
+    "original_price": 4999,
+    "rating": 4.6,
+    "image_url": "https://via.placeholder.com/600x600?text=Running+Shoes",
+    "category": "shoes",
+    "brand": "SportPro",
+    "in_stock": true,
+    "is_new": true
+  }
+]

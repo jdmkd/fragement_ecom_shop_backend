@@ -1,0 +1,14 @@
+{% autoescape off %}
+Hello {{ user.username }},
+
+Please use the following OTP to verify your account:
+
+OTP: {{ otp }}
+
+This OTP is valid for 5 minutes.
+
+If you did not request this, please ignore this email.
+
+Thanks,
+The E-commerce Team
+{% endautoescape %} 
