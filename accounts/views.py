@@ -1,3 +1,5 @@
+from datetime import datetime
+import uuid
 from rest_framework import generics, status
 from .serializers import (
     UserSerializer, RegisterSerializer, CustomTokenObtainPairSerializer, OTPVerificationSerializer,
@@ -18,12 +20,45 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 User = get_user_model()
 
-def get_standard_response(data=None, message="Success", status_code=status.HTTP_200_OK):
+def get_standard_response(
+    success=False,
+    data=None,
+    message="Success",
+    special_code="",
+    errors=None,
+    pagination=None,
+    status_code=status.HTTP_200_OK,
+    request_id=None
+):
+    """
+    Standard API Response for consistency across endpoints.
+    - If success=False => data=None, errors is required.
+    - If success=True  => errors=None.
+    """
+
+    if not success:
+        data = None
+        if errors is None:
+            errors = {"detail": ["An unknown error occurred."]}
+    else:
+        errors = None
+
+    if request_id is None:
+        request_id = str(uuid.uuid4())
+
     return Response({
-        "data": data,
+        "success": success,
+        "status": status_code,
         "message": message,
-        "status": status_code
-    }, status=status_code)
+        "special_code": special_code,
+        "data": data,
+        "errors": errors,
+        "meta": {
+            "request_id": request_id,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "pagination": pagination
+        }
+    }, status=status_code)        
 
 
 class RegisterView(generics.CreateAPIView):
@@ -44,17 +79,19 @@ class RegisterView(generics.CreateAPIView):
             'otp': user.otp,
         })
         send_mail(
-            mail_subject, 
-            message, 
-            settings.EMAIL_HOST_USER, 
-            [user.email], 
+            mail_subject,
+            message,
+            settings.EMAIL_HOST_USER,
+            [user.email],
             fail_silently=False
         )
 
         headers = self.get_success_headers(serializer.data)
         return get_standard_response(
+            success=True,
             data=serializer.data,
             message="Registration successful. Please check your email for OTP verification.",
+            special_code="registration_successful",
             status_code=status.HTTP_201_CREATED
         )
 
@@ -66,13 +103,15 @@ class OTPVerificationView(APIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         email = serializer.validated_data['email']
         user = User.objects.get(email=email)
-        
+
         return get_standard_response(
+            success=True,
             data=UserSerializer(user).data,
             message="Account verified successfully.",
+            special_code="account_verified_successful",
             status_code=status.HTTP_200_OK
         )
 
@@ -86,15 +125,32 @@ class LoginView(TokenObtainPairView):
         try:
             serializer.is_valid(raise_exception=True)
         except Exception as e:
+            error_detail = getattr(e, "detail", None)
+
+            # Defaults
+            code = "data_error"
+            message = str(e)
+            errors = {"detail": [str(e)]}
+
+            if isinstance(error_detail, dict):
+                # Extract our custom structured error
+                code = error_detail.get("code", "data_error")
+                message = error_detail.get("message", str(e))
+                errors = error_detail
+
             return get_standard_response(
-                data=None,
-                message=str(e),
-                status_code=status.HTTP_400_BAD_REQUEST
+                success=False,
+                message=message,
+                special_code=code,
+                status_code=status.HTTP_400_BAD_REQUEST,
+                errors=errors,
             )
         
         return get_standard_response(
+            success=True,
             data=serializer.validated_data,
             message="Login successful.",
+            special_code="login_successful",
             status_code=status.HTTP_200_OK
         )
 
@@ -113,18 +169,23 @@ class ChangePasswordView(APIView):
 
         if not user.check_password(old_password):
             return get_standard_response(
-                data=None,
+                success=True,
                 message="Old password is not correct.",
-                status_code=status.HTTP_400_BAD_REQUEST
+                special_code="password_not_matched",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                data=None,
+                errors={"old_password": ["Old password is incorrect."]}
             )
         
         user.set_password(new_password)
         user.save()
 
         return get_standard_response(
-            data=None,
+            success=True,
             message="Password changed successfully.",
-            status_code=status.HTTP_200_OK
+            special_code="password_changed_successfully",
+            status_code=status.HTTP_200_OK,
+            data=None,
         )
 
 
@@ -163,9 +224,11 @@ class RequestPasswordResetEmailView(APIView):
             )
         
         return get_standard_response(
-            data=None,
+            success=True,
             message="Password reset email sent. Please check your inbox.",
-            status_code=status.HTTP_200_OK
+            special_code="password_reset_email_sent",
+            status_code=status.HTTP_200_OK,
+            data=None,
         )
 
 
@@ -178,9 +241,11 @@ class PasswordResetConfirmView(APIView):
         serializer.is_valid(raise_exception=True)
 
         return get_standard_response(
-            data=None,
+            success=True,
             message="Password reset successful.",
-            status_code=status.HTTP_200_OK
+            special_code="password_reset_successful",
+            status_code=status.HTTP_200_OK,
+            data=None,
         )
 
 
@@ -213,9 +278,11 @@ class ResendOTPView(APIView):
         )
 
         return get_standard_response(
-            data=None,
+            success=True,
             message="New OTP sent successfully. Please check your email.",
-            status_code=status.HTTP_200_OK
+            special_code="new_otp_sent",
+            status_code=status.HTTP_200_OK,
+            data=None,
         )
 
 
@@ -225,8 +292,9 @@ class UserDetailView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return get_standard_response(
-            data=serializer.data,
+            success=True,
             message="User data fetched successfully.",
-            status_code=status.HTTP_200_OK
+            status_code=status.HTTP_200_OK,
+            data=serializer.data,
         )
 

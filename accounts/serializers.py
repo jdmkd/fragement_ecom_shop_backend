@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -53,53 +54,65 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        username_or_email = attrs.get('username')
-        password = attrs.get('password')
+        username_or_email = attrs.get("username")
+        password = attrs.get("password")
 
-        user = None
-        if '@' in username_or_email:
-            try:
-                user = User.objects.get(email=username_or_email)
-            except User.DoesNotExist:
-                pass
-        
-        if user is None:
-            try:
-                user = User.objects.get(username=username_or_email)
-            except User.DoesNotExist:
-                pass
+        # Try email OR username in one query
+        try:
+            user = User.objects.get(Q(username=username_or_email) | Q(email=username_or_email))
+        except User.DoesNotExist:
+            user = None
 
+        # Invalid credentials
         if user is None or not user.check_password(password):
-            raise AuthenticationFailed('Invalid credentials, try again')
+            raise AuthenticationFailed({
+                "code": "invalid_credentials",
+                "message": "Invalid credentials, try again"
+            })
 
+        # Account inactive
         if not user.is_active:
-            raise AuthenticationFailed('Account is inactive. Please contact support.')
-        
-        # Set the correct username for the parent serializer's validation
-        attrs[self.username_field] = user.username
+            raise AuthenticationFailed({
+                "code": "account_inactive",
+                "message": "Account is inactive. Please contact support."
+            })
 
+        # Account not verified → send OTP + error
         if not user.is_verified:
             user.generate_otp()
-            current_site = Site.objects.get_current()
-            mail_subject = 'Verify your account.'
-            message = render_to_string('accounts/otp_email.html', {
-                'user': user,
-                'domain': current_site.domain,
-                'otp': user.otp,
+            try:
+                current_site = Site.objects.get_current()
+                mail_subject = "Verify your account."
+                message = render_to_string("accounts/otp_email.html", {
+                    "user": user,
+                    "domain": current_site.domain,
+                    "otp": user.otp,
+                })
+                send_mail(
+                    mail_subject,
+                    message,
+                    settings.EMAIL_HOST_USER,
+                    [user.email],
+                    fail_silently=True 
+                )
+            except Exception as e:
+                # Log error (don’t block login response)
+                pass
+
+            raise AuthenticationFailed({
+                "code": "account_not_verified",
+                "message": "Your account is not verified. Please check your email for OTP."
             })
-            send_mail(
-                mail_subject, 
-                message, 
-                settings.EMAIL_HOST_USER, 
-                [user.email], 
-                fail_silently=False
-            )
-            raise AuthenticationFailed('Account not verified. Please verify your email with the new OTP sent.')
-        
+
+        # Proceed with default JWT validation
+        attrs[self.username_field] = user.username
         data = super().validate(attrs)
-        data['username'] = user.username
-        data['email'] = user.email
-        data['fullname'] = user.fullname
+
+        # Extend response payload
+        data["username"] = user.username
+        data["email"] = user.email
+        data["fullname"] = user.fullname
+
         return data
 
 
