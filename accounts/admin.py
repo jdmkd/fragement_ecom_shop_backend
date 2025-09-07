@@ -6,7 +6,7 @@ from django.contrib.auth.admin import UserAdmin
 class CustomUserAdmin(UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal info', {'fields': ('fullname', 'email', 'phonenumber', 'address', 'profile_image')}),
+        ('Personal info', {'fields': ('fullname', 'email', 'phonenumber', 'profile_image')}),
         ('OTP Information', {'fields': ('otp', 'otp_expiry')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'is_verified')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
