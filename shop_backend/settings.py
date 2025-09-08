@@ -14,7 +14,7 @@ dotenv.load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.149.71.74', '10.149.71.74:8080']
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
@@ -39,11 +39,14 @@ INSTALLED_APPS = [
     # local apps
     'accounts',
     'catalog',
-    # 'inventory',
-    # 'cart',
-    # 'orders',
-    # 'payments',
-    # 'shipping',
+    'inventory',
+    'cart',
+    'orders',
+    'payments',
+    'shipping',
+    'returns',
+
+    'drf_spectacular', 'drf_spectacular_sidecar'
 ]
 
 MIDDLEWARE = [
@@ -62,6 +65,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://localhost:3000',
+    'http://10.149.71.74:8080',
 ]
 
 # CsrfViewMiddleware.csrf_failure = lambda request, reason: HttpResponse("CSRF token missing", status=403)
@@ -69,13 +73,21 @@ CsrfViewMiddleware.csrf_failure = lambda request, reason: HttpResponse("CSRF tok
 
 CORS_ALLOW_CREDENTIALS = True  # Ensure credentials (cookies) are allowed
 CORS_ORIGIN_WHITELIST = ['http://127.0.0.1:3000',
-                         'http://localhost:3000',]  # Add your frontend's origin
+                         'http://localhost:3000',
+                         'http://10.149.71.74:8080']  # Add your frontend's origin
 
 CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:3000',
-                        'http://localhost:3000',]
+                        'http://localhost:3000',
+                        'http://10.149.71.74:8080']
 
 CORS_ALLOW_HEADERS = ['Content-Type', 'Authorization']
-CORS_ORIGIN_ALLOW_ALL = False
+
+# CORS - during development allow frontend dev server
+# CORS_ORIGIN_ALLOW_ALL = False
+CORS_ALLOW_ALL_ORIGINS = True
+
+
+
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 # SESSION_COOKIE_SAMESITE = 'None'  # This allows the cookie to be sent with cross-origin requests
 SESSION_COOKIE_HTTPONLY = True
@@ -88,6 +100,8 @@ CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'  # or 'Strict' if possible
 
+# CSRF_USE_SESSIONS = True  # Store CSRF token in session instead of cookie
+
 
 # REST_FRAMEWORK_JWT
 REST_FRAMEWORK = {
@@ -97,7 +111,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
     ),
-    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
+    # 'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
     'DEFAULT_FILTER_BACKENDS': (
@@ -147,15 +162,13 @@ WSGI_APPLICATION = 'shop_backend.wsgi.application'
 # Database - fill with your MySQL credentials
 DATABASES = {
     'default': {
-        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.sqlite3'),
-        'NAME': os.environ.get('DB_NAME', BASE_DIR / 'db.sqlite3'),
-        'USER': os.environ.get('DB_USER', ''),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', ''),
-        'PORT': os.environ.get('DB_PORT', ''),
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        } if os.environ.get('DB_ENGINE') == 'django.db.backends.mysql' else {},
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST'),
+        'PORT': os.environ.get('DB_PORT'),
+         
     }
 }
 
@@ -214,9 +227,3 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
 
 
-# CORS - during development allow frontend dev server
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-]
