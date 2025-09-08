@@ -11,18 +11,165 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.contrib.sites.models import Site
+from accounts.models import Address
 
 User = get_user_model()
 
+class AddressBatchSerializer(serializers.ListSerializer):
+    """
+    Handles batch creation/updating of addresses and ensures only one default per type in the same request.
+    """
+    def validate(self, data):
+        seen_defaults = {}
+        for item in data:
+            if item.get('is_default', False):
+                address_type = item.get('address_type', 'shipping')
+                if seen_defaults.get(address_type):
+                    raise serializers.ValidationError(
+                        f"Multiple default addresses for {address_type} in the same request."
+                    )
+                seen_defaults[address_type] = True
+        return data
 
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = (
+            'id',
+            'user',
+            'address_line1',
+            'address_line2',
+            'city',
+            'state',
+            'country',
+            'postal_code',
+            'phone_number',
+            'address_type',
+            'is_default',
+            'created_at',
+            'updated_at',
+        )
+        read_only_fields = ('id', 'created_at', 'updated_at')
+        # list_serializer_class = AddressBatchSerializer
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        address_type = attrs.get('address_type', getattr(self.instance, 'address_type', 'shipping'))
+        is_default = attrs.get('is_default', getattr(self.instance, 'is_default', False))
+
+        if is_default:
+            qs = Address.objects.filter(user=user, address_type=address_type, is_default=True)
+            if self.instance:
+                qs = qs.exclude(id=self.instance.id)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    f"A default {address_type} address already exists for this user."
+                )
+        return attrs
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        address_type = validated_data.get('address_type', 'shipping')
+        is_default = validated_data.get('is_default', False)
+
+        if is_default:
+            # Unset previous defaults automatically
+            Address.objects.filter(user=user, address_type=address_type, is_default=True).update(is_default=False)
+
+        return Address.objects.create(user=user, **validated_data)
+
+    def update(self, instance, validated_data):
+        user = instance.user
+        address_type = validated_data.get('address_type', instance.address_type)
+        is_default = validated_data.get('is_default', instance.is_default)
+
+        if is_default:
+            # Unset previous defaults automatically
+            Address.objects.filter(user=user, address_type=address_type).exclude(id=instance.id).update(is_default=False)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'fullname', 'email', 'phonenumber', 'password')
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        return User.objects.create_user(**validated_data)
+    
 class UserSerializer(serializers.ModelSerializer):
+    # Now writable nested addresses
+    addresses = AddressSerializer(many=True, required=False)
+
+    default_shipping_address = serializers.SerializerMethodField()
+    default_billing_address = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
-            'id', 'username', 'email', 'fullname', 'phonenumber', 'is_verified', 'profile_image', 'address'
+            'id', 'username', 'email', 'fullname', 'phonenumber', 'is_verified', 'profile_image',
+            'addresses', 'default_shipping_address', 'default_billing_address',
         )
         read_only_fields = ('is_verified',)
 
+    def get_default_shipping_address(self, obj):
+        address = obj.addresses.filter(address_type='shipping', is_default=True).first()
+        if address:
+            return AddressSerializer(address).data
+        return None
+
+    def get_default_billing_address(self, obj):
+        address = obj.addresses.filter(address_type='billing', is_default=True).first()
+        if address:
+            return AddressSerializer(address).data
+        return None
+
+    def create(self, validated_data):
+        addresses_data = validated_data.pop('addresses', [])
+        user = User.objects.create(**validated_data)
+
+        request = self.context.get('request')
+
+        for address_data in addresses_data:
+            serializer = AddressSerializer(data=address_data, context={'request': request})
+            serializer.is_valid(raise_exception=True)
+            serializer.save(user=user)
+
+        return user
+
+    def update(self, instance, validated_data):
+        addresses_data = validated_data.pop('addresses', [])
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        request = self.context.get('request')
+
+        # Handle nested addresses
+        for address_data in addresses_data:
+            address_id = address_data.get('id', None)
+            if address_id:
+                # Update existing address
+                try:
+                    address_instance = Address.objects.get(id=address_id, user=instance)
+                except Address.DoesNotExist:
+                    continue  # skip invalid IDs
+                serializer = AddressSerializer(address_instance, data=address_data, context={'request': request})
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+            else:
+                # Create new address
+                serializer = AddressSerializer(data=address_data, context={'request': request})
+                serializer.is_valid(raise_exception=True)
+                serializer.save(user=instance)
+
+        return instance
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
@@ -197,3 +344,4 @@ class ResendOTPSerializer(serializers.Serializer):
         except User.DoesNotExist:
             raise serializers.ValidationError("No account found with this email.")
         return value
+

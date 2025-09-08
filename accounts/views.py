@@ -1,8 +1,10 @@
 from datetime import datetime
 import uuid
-from rest_framework import generics, status
+from rest_framework import generics, permissions, status
+
+from accounts.models import Address
 from .serializers import (
-    UserSerializer, RegisterSerializer, CustomTokenObtainPairSerializer, OTPVerificationSerializer,
+    AddressSerializer, UserSerializer, RegisterSerializer, CustomTokenObtainPairSerializer, OTPVerificationSerializer,
     ChangePasswordSerializer, ResetPasswordEmailSerializer, ResetPasswordConfirmSerializer, ResendOTPSerializer
 )
 from django.contrib.auth import get_user_model
@@ -298,3 +300,20 @@ class UserDetailView(APIView):
             data=serializer.data,
         )
 
+
+class AddressListCreateView(generics.ListCreateAPIView):
+    serializer_class = AddressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Address.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = AddressSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Address.objects.filter(user=self.request.user)

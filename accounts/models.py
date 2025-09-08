@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
@@ -64,3 +65,43 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     def __str__(self):
         return self.username
+
+
+ADDRESS_TYPE = [
+    ('billing', 'Billing'),
+    ('shipping', 'Shipping'),
+]
+
+class Address(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='addresses'
+    )
+    address_line1 = models.CharField(max_length=255)
+    address_line2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    country = models.CharField(max_length=100, default='India')
+    postal_code = models.CharField(max_length=20)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    address_type = models.CharField(max_length=20, choices=ADDRESS_TYPE, default='shipping')
+    is_default = models.BooleanField(default=False)  # For default shipping/billing
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = 'Addresses'
+        ordering = ['-is_default', 'id']
+        indexes = [
+            models.Index(fields=['user', 'address_type']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            # Unset default for all other addresses of the same user and type
+            Address.objects.filter(user=self.user, address_type=self.address_type).exclude(id=self.id).update(is_default=False)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.address_type} - {self.address_line1}"
