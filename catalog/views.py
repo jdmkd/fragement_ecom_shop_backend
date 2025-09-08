@@ -3,6 +3,8 @@ from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 
+from catalog.filters import ProductFilter
+
 from .models import (
     Category, Brand, Product, ProductAttribute, ProductAttributeValue,
     ProductVariant, ProductImage
@@ -91,9 +93,16 @@ class ProductImageViewSet(BaseViewSet):
 class ProductViewSet(BaseViewSet):
     queryset = Product.objects.filter(is_active=True, deleted_at__isnull=True)
     serializer_class = ProductSerializer
-    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-    search_fields = ['name', 'sku', 'brand__name']
-    filterset_fields = ['is_listed', 'is_featured', 'brand', 'categories']
+
+    lookup_field = "slug" # use slug instead of id
+    lookup_value_regex = "[^/]+" # allows dots, hyphens, etc. in slug
+
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = ProductFilter
+    search_fields = ['name', 'sku', 'brand__name', 'category__name']
+    # filterset_fields = ['is_listed', 'is_featured', 'brand', 'categories']
+    ordering_fields = ["price", "name", "created_at"]
+    ordering = ['-created_at']
 
     @action(detail=True, methods=['get'])
     def variants(self, request, pk=None):

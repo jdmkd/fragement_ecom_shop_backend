@@ -6,6 +6,14 @@ from .models import (
 )
 
 
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 1
+
+class ProductVariantInline(admin.TabularInline):
+    model = ProductVariant
+    extra = 1
+
 class DeletedListFilter(admin.SimpleListFilter):
     title = _('Deleted')
     parameter_name = 'deleted'
@@ -51,7 +59,8 @@ class ProductAdmin(SoftDeleteAdmin):
     list_filter = ('is_listed', 'is_featured', 'is_active', DeletedListFilter)
     prepopulated_fields = {'slug': ('name',)}
     filter_horizontal = ('categories',)
-
+    
+    inlines = [ProductVariantInline, ProductImageInline]
 
 @admin.register(ProductAttribute)
 class ProductAttributeAdmin(admin.ModelAdmin):

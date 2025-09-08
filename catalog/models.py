@@ -123,6 +123,8 @@ class ProductAttributeValue(TimeStampedModel):
             self.slug = generate_unique_slug(ProductAttributeValue, self.value)
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f"{self.attribute.display_name}: {self.value}"
 
 class ProductVariant(TimeStampedModel, SoftDeleteModel):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants')
@@ -147,6 +149,9 @@ class ProductVariant(TimeStampedModel, SoftDeleteModel):
             models.UniqueConstraint(fields=['product'], condition=models.Q(is_default=True), name="unique_default_variant_per_product")
         ]
 
+    def __str__(self):
+        return f"{self.sku} ({self.name})"
+
 class ProductImage(TimeStampedModel):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
     variant = models.ForeignKey(ProductVariant, null=True, blank=True, on_delete=models.CASCADE, related_name='images')
@@ -160,3 +165,5 @@ class ProductImage(TimeStampedModel):
         constraints = [
             models.UniqueConstraint(fields=['product'], condition=models.Q(is_primary=True), name="unique_primary_image_per_product")
         ]
+    def __str__(self):
+        return f"Image for {self.product} ({'Variant: ' + self.variant.sku if self.variant else 'All Variants'})"

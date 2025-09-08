@@ -25,7 +25,7 @@ class BrandSerializer(serializers.ModelSerializer):
 class ProductAttributeValueSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductAttributeValue
-        exclude = ('deleted_at',)
+        fields = "__all__"
 
 
 class ProductAttributeSerializer(serializers.ModelSerializer):
@@ -33,7 +33,7 @@ class ProductAttributeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductAttribute
-        exclude = ('deleted_at',)
+        fields = "__all__"
 
 
 class ProductVariantSerializer(serializers.ModelSerializer):
@@ -45,7 +45,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
-        exclude = ('deleted_at',)
+        fields = "__all__"
 
 
 class ProductSerializer(serializers.ModelSerializer):
